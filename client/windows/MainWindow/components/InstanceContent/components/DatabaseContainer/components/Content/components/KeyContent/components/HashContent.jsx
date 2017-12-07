@@ -35,6 +35,8 @@ class HashContent extends BaseContent {
         this.state.members.push([result[i].toString(), result[i + 1]])
       }
       this.cursor = cursor
+      // sort members order
+      this.state.members.sort(hashKeySort)
       this.setState({members: this.state.members}, () => {
         if (typeof this.state.selectedIndex !== 'number' && this.state.members.length) {
           this.handleSelect(null, 0)
@@ -91,6 +93,8 @@ class HashContent extends BaseContent {
         if (this.state.selectedIndex >= members.length - 1) {
           this.state.selectedIndex -= 1
         }
+        // sort members order
+        members.sort(hashKeySort)
         this.setState({members, length: this.state.length - 1}, () => {
           this.props.onKeyContentChange()
           this.handleSelect(null, this.state.selectedIndex)
@@ -188,6 +192,8 @@ class HashContent extends BaseContent {
                         return
                       }
                       this.state.members.push([data, Buffer.from(value)])
+                      // sort members order
+                      this.state.members.sort(hashKeySort)
                       this.setState({
                         members: this.state.members,
                         length: this.state.length + 1
@@ -241,6 +247,8 @@ class HashContent extends BaseContent {
                       this.props.redis.multi()
                       .hdel(keyName, source)
                       .hset(keyName, target, member[1]).exec()
+                      // sort members order
+                      members.sort(hashKeySort)
                       this.setState({members})
                     }).catch(() => {})
                   }
@@ -262,3 +270,8 @@ class HashContent extends BaseContent {
 }
 
 export default HashContent
+
+function hashKeySort(a, b) {
+  // sort alphabetically, but make sure '_' prefixed words are at the end of the list
+  return ((a[0][0] === '_') !== (b[0][0] === '_')) ? a < b : a > b
+}
