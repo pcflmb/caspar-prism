@@ -1,11 +1,11 @@
 {
-  "name": "medis",
-  "description": "GUI for Redis",
-  "productName": "Medis",
+  "name": "caspar-prism",
+  "description": "GUI for Caspar house state",
+  "productName": "Caspar Prism",
   "version": "0.6.1",
   "electronVersion": "1.4.15",
   "license": "MIT",
-  "author": "luin <i@zihua.li> (http://zihua.li)",
+  "author": "Brendan Berman <brendan@berman.io>",
   "main": "server/main.js",
   "scripts": {
     "build": "webpack --progress --colors",

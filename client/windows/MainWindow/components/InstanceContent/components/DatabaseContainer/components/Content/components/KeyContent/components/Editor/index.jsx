@@ -32,7 +32,9 @@ class Editor extends React.PureComponent {
       modes: {
         raw: false,
         json: false,
-        messagepack: false
+        messagepack: false,
+        caspar_json: false,
+        caspar_raw: false
       }
     }
   }
@@ -73,11 +75,17 @@ class Editor extends React.PureComponent {
     modes.raw = content
     modes.json = tryFormatJSON(content, true)
     modes.messagepack = modes.json ? false : tryFormatMessagepack(buffer, true)
+    modes.caspar_json = tryFormatCasparJSON(content, true)
+    modes.caspar_raw = tryFormatCasparRaw(content, true)
     let currentMode = 'raw'
     if (modes.messagepack) {
       currentMode = 'messagepack'
     } else if (modes.json) {
       currentMode = 'json'
+    } else if (modes.caspar_json) {
+      currentMode = 'caspar_json'
+    } else if (modes.caspar_raw) {
+      currentMode = 'caspar_raw'
     }
     this.setState({modes, currentMode, changed: false}, () => {
       this.updateLayout()
@@ -99,6 +107,20 @@ class Editor extends React.PureComponent {
         return
       }
       content = msgpack.encode(JSON.parse(content))
+    } else if (this.state.currentMode === 'caspar_json') {
+      content = tryFormatCasparJSON(this.state.modes.caspar_json)
+      if (!content) {
+        alert('The json is invalid. Please check again.')
+        return
+      }
+    } else if (this.state.currentMode === 'caspar_raw') {
+      alert('Editing binary data is not allowed at this time... bug Brendan about it.')
+      return
+      // content = tryFormatCasparRaw(this.state.modes.caspar_raw)
+      // if (!content) {
+      //   alert('The hex code is invalid. Please check again.')
+      //   return
+      // }
     }
     this.props.onSave(content, err => {
       if (err) {
@@ -199,6 +221,42 @@ class Editor extends React.PureComponent {
           lint: Boolean(this.state.modes.raw)
         }}
         />)
+    } else if (this.state.currentMode === 'caspar_json') {
+      viewer = (<Codemirror
+        ref="codemirror"
+        key="caspar_json"
+        value={this.state.modes.caspar_json}
+        onChange={this.updateContent.bind(this, 'caspar_json')}
+        options={{
+          mode: {
+            name: 'javascript',
+            json: true
+          },
+          tabSize: 2,
+          indentWithTabs: true,
+          styleActiveLine: true,
+          lineNumbers: true,
+          lineWrapping: this.state.wrapping,
+          gutters: ['CodeMirror-lint-markers'],
+          autoCloseBrackets: true,
+          matchTags: true,
+          lint: Boolean(this.state.modes.raw)
+        }}
+        />)
+    } else if (this.state.currentMode === 'caspar_raw') {
+      viewer = (<Codemirror
+        ref="codemirror"
+        key="caspar_raw"
+        value={this.state.modes.caspar_raw}
+        onChange={this.updateContent.bind(this, 'caspar_raw')}
+        options={{
+          mode: 'none',
+          styleActiveLine: true,
+          lineWrapping: this.state.wrapping,
+          gutters: ['CodeMirror-lint-markers'],
+          lineNumbers: true
+        }}
+        />)
     } else {
       viewer = <div/>
     }
@@ -227,6 +285,8 @@ class Editor extends React.PureComponent {
           <option value="raw" disabled={typeof this.state.modes.raw !== 'string'}>Raw</option>
           <option value="json" disabled={typeof this.state.modes.json !== 'string'}>JSON</option>
           <option value="messagepack" disabled={typeof this.state.modes.messagepack !== 'string'}>MessagePack</option>
+          <option value="caspar_json" disabled={typeof this.state.modes.caspar_json !== 'string'}>Caspar JSON</option>
+          <option value="caspar_raw" disabled={typeof this.state.modes.caspar_raw !== 'string'}>Caspar Raw</option>
         </select>
         <button
           className="nt-button"
@@ -240,10 +300,10 @@ class Editor extends React.PureComponent {
 
 export default Editor
 
-function tryFormatJSON(jsonString, beautify) {
+function tryFormatJSON(jsonString, beautify, allowNonObjects) {
   try {
     const o = JSON.parse(jsonString)
-    if (o && typeof o === 'object' && o !== null) {
+    if ((o && typeof o === 'object' && o !== null) || allowNonObjects) {
       if (beautify) {
         return JSON.stringify(o, null, '\t')
       }
@@ -252,6 +312,22 @@ function tryFormatJSON(jsonString, beautify) {
   } catch (e) { /**/ }
 
   return false
+}
+
+function tryFormatCasparJSON(jsonString, beautify) {
+  // TODO(pcflmb): use parseMore so that we can parse NaN and Inf
+  const json_prefix = '[json]'
+  if (beautify) {
+    // remove json tag
+    if (!jsonString.startsWith(json_prefix)) {
+      return false
+    }
+    jsonString = jsonString.slice(json_prefix.length)
+    return tryFormatJSON(jsonString, beautify, true)
+  }
+  // unbeautify
+  const ret = tryFormatJSON(jsonString, beautify, true)
+  return ret === false ? false : json_prefix + ret
 }
 
 function tryFormatMessagepack(buffer, beautify) {
@@ -271,4 +347,19 @@ function tryFormatMessagepack(buffer, beautify) {
   } catch (e) { /**/ }
 
   return false
+}
+
+function tryFormatCasparRaw(buffer, beautify) {
+  const raw_prefix = '[raw]'
+  if (beautify) {
+    // remove raw tag
+    if (!buffer.startsWith(raw_prefix)) {
+      return false
+    }
+    buffer = buffer.slice(raw_prefix.length)
+    // TODO(pcflmb): format like hexviewer
+    return buffer
+  }
+  // add the raw tag back in and return
+  return raw_prefix + buffer
 }

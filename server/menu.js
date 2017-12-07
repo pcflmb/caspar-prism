@@ -116,7 +116,7 @@ const menuTemplate = [{
   submenu: [{
     label: 'Report an Issue...',
     click() {
-      require('shell').openExternal('mailto:medis@zihua.li');
+      require('shell').openExternal('mailto:brendan@berman.io');
     }
   }, {
     label: 'Learn More',
